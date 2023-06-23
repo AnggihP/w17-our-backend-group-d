@@ -1,0 +1,131 @@
+import {
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  CreateBookmarkDto,
+  EditBookmarkDto,
+} from './dto';
+import { Prisma } from '@prisma/client';
+
+
+@Injectable()
+export class BookmarkService {
+  constructor(private prisma: PrismaService) {}
+
+  getBookmarks(userId: number) {
+    return this.prisma.bookmark.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+  }
+
+  getBookmarkById(
+    userId: number,
+    bookmarkId: number,
+  ) {
+    return this.prisma.bookmark.findFirst({
+      where: {
+        id: bookmarkId,
+        userId,
+      },
+    });
+  }
+
+  async createBookmark(
+    userId: number,
+    dto: CreateBookmarkDto,
+  ) {
+    const bookmark =
+    await this.prisma.bookmark.create({
+      data: {
+            user: userId,
+            ...dto,
+          } as unknown as Prisma.BookmarkCreateInput,
+        });
+        
+        return bookmark;
+      }
+    
+      /*async createBookmark(dto: CreateBookmarkDto) {
+        const bookmark = await this.prisma.bookmark.create({
+          data: {
+            title: dto.title,
+            description: dto.description,
+            link: dto.link,
+            user: dto.userId,
+            // tagId: ... // Assign the tagId here
+          },
+        });
+      
+        // Associate the tag with the bookmark
+        const tag = await this.prisma.tag.findUnique({
+          where: { id: dto.tagId },
+        });
+      
+        if (tag) {
+          await this.prisma.bookmark.update({
+            where: { id: bookmark.id },
+            data: { Tag: { connect: { id: tag.id } } },
+          });
+        }
+      
+        return bookmark;
+      }*/
+      
+      async editBookmarkById(
+        userId: number,
+        bookmarkId: number,
+        dto: EditBookmarkDto,
+        ) {
+          // get the bookmark by id
+          const bookmark =
+          await this.prisma.bookmark.findUnique({
+            where: {
+              id: bookmarkId,
+            },
+          });
+          
+          // check if user owns the bookmark
+          if (!bookmark || bookmark.userId !== userId)
+          throw new ForbiddenException(
+            'Access to resources denied',
+            );
+            
+            return this.prisma.bookmark.update({
+              where: {
+                id: bookmarkId,
+              },
+              data: {
+                ...dto,
+              },
+            });
+          }
+          
+  async deleteBookmarkById(
+    userId: number,
+    bookmarkId: number,
+    ) {
+    const bookmark =
+      await this.prisma.bookmark.findUnique({
+        where: {
+          id: bookmarkId,
+        },
+      });
+      
+      // check if user owns the bookmark
+      if (!bookmark || bookmark.userId !== userId)
+      throw new ForbiddenException(
+        'Access to resources denied',
+        );
+        
+        await this.prisma.bookmark.delete({
+          where: {
+            id: bookmarkId,
+          },
+        });
+      }
+    }
+    
